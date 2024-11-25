@@ -2,6 +2,8 @@ import pandas
 
 df = pandas.read_csv("hotels.csv", dtype={"id": str})
 df_cards = pandas.read_csv("cards.csv", dtype=str).to_dict(orient="records")
+df_cards_security = pandas.read_csv("card_security.csv", dtype=str)
+
 print("---------------", df_cards)
 #NOTE: as we get input as int, but
 class Hotel:
@@ -44,26 +46,34 @@ class CreditCard:
     def validate(self, expiration, holder, cvc):
         card_data = {"number":self.number, "expiration": expiration,
                      "cvc": cvc, "holder": holder}
-        print("===========", card_data)
         if card_data in df_cards:
             return True
         else:
             return False
 
-    #def pay(self):   find the existing balance and subtract ....
-
+# Here child class inherits from parent class.
+class SecureCreditCard(CreditCard):
+    def authenticate(self, given_password):
+        password = df_cards_security.loc[df_cards_security["number"] == self.number, "pass"].squeeze()
+        if password == given_password:
+            return  True
+        else:
+            return False
 
 print(df)
 hotel_ID = input("Enter  the Hotel ID: ")
 hotel = Hotel(hotel_ID)
 if hotel.available():   #Note: in real, we connect to a DB and get data from it (bank,,,)
-    credit_card = CreditCard(number="1234567890123456")
+    credit_card = SecureCreditCard(number="1234567890123456")
     if credit_card.validate(expiration="12/26",cvc="123", holder="JOHN SMITH"):
-        hotel.book()
-        name = input("Enter your name: ")
-        reservation_ticket = ReservationTicket(name, hotel)
-        print("============================")
-        print(reservation_ticket.generate())
+        if credit_card.authenticate(given_password="mypass"):
+            hotel.book()
+            name = input("Enter your name: ")
+            reservation_ticket = ReservationTicket(name, hotel)
+            print("============================")
+            print(reservation_ticket.generate())
+        else:
+            print("Credit cart auth failed!")
     else:
         print("There was a problem with your payment!")
 
